@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>webvibe.ai</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+:root{
+  --bg:#0b0f17;
+  --panel:#141b26;
+  --accent:#4f8cff;
+  --text:#e8e8e8;
+  --muted:#9aa4b2;
+}
+
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:system-ui, Arial;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  display:flex;
+  flex-direction:column;
+}
+
+/* NAVBAR */
+.navbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 16px;
+  background:var(--panel);
+  border-bottom:1px solid #222b3a;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-weight:600;
+}
+
+.brand i{color:var(--accent)}
+
+.menu-btn{
+  display:none;
+  font-size:20px;
+  cursor:pointer;
+  color:white;
+}
+
+.nav-links{
+  display:flex;
+  gap:16px;
+}
+
+.nav-links a{
+  color:var(--muted);
+  text-decoration:none;
+  font-size:14px;
+}
+
+.nav-links a:hover{color:white}
+
+/* OUTPUT */
+#output{
+  flex:1;
+  overflow:auto;
+  padding:20px;
+  background:white;
+  color:black;
+}
+
+/* CHATBAR (FIXED ROW ALWAYS) */
+.chatbar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:12px;
+  background:var(--panel);
+  border-top:1px solid #222b3a;
+}
+
+/* INPUT */
+.chatbar input{
+  flex:1;
+  min-width:0;
+  padding:12px;
+  border:none;
+  outline:none;
+  border-radius:10px;
+  background:#0b0f16;
+  color:white;
+}
+
+/* BUTTONS ALWAYS INLINE */
+.chatbar button{
+  flex:0 0 auto;
+  border:none;
+  cursor:pointer;
+  border-radius:10px;
+  padding:10px 12px;
+  font-size:16px;
+}
+
+.btn-send{
+  background:var(--accent);
+  color:white;
+}
+
+.btn-download{
+  background:#22c55e;
+  color:white;
+}
+
+/* STATUS */
+.status{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:12px;
+  color:#8b96a8;
+}
+
+/* DOT */
+.dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#22c55e;
+}
+
+/* MODAL */
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  justify-content:center;
+  align-items:center;
+}
+
+.modal-content{
+  background:#141b26;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:350px;
+  color:white;
+}
+
+.close{
+  float:right;
+  cursor:pointer;
+  color:#aaa;
+}
+
+/* MOBILE */
+@media (max-width:768px){
+
+  .menu-btn{
+    display:block;
+  }
+
+  .nav-links{
+    display:none;
+    position:absolute;
+    top:60px;
+    right:10px;
+    flex-direction:column;
+    background:var(--panel);
+    padding:10px;
+    border-radius:10px;
+  }
+
+  .nav-links.active{
+    display:flex;
+  }
+
+  /* KEEP SAME ROW ALWAYS */
+  .chatbar{
+    flex-wrap:nowrap;
+  }
+
+  .status{
+    display:none;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <div class="brand">
+    <i class="fa-solid fa-robot"></i> webvibe.ai
+  </div>
+
+  <div class="menu-btn" onclick="toggleMenu()">
+    <i class="fa-solid fa-bars"></i>
+  </div>
+
+  <div class="nav-links" id="menu">
+    <a href="#" onclick="openModal('about')">About</a>
+    <a href="#" onclick="openModal('contact')">Contact</a>
+    <a href="#" onclick="openModal('donation')">Donation</a>
+  </div>
+</div>
+
+<!-- OUTPUT -->
+<div id="output">
+  <h2>AI Studio</h2>
+  <p>Type a prompt like "create portfolio website"</p>
+</div>
+
+<!-- CHATBAR -->
+<div class="chatbar">
+
+  <input id="prompt" placeholder="Message AI..." onkeydown="if(event.key==='Enter') generate()">
+
+  <button class="btn-send" onclick="generate()">
+    <i class="fa-solid fa-paper-plane"></i>
+  </button>
+
+  <button class="btn-download" onclick="downloadHTML()">
+    <i class="fa-solid fa-download"></i>
+  </button>
+
+  <div class="status">
+    <div class="dot"></div>
+    <span id="statusText">Ready</span>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">×</span>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+
+const API_URL = "https://long-dream-50ed.rishiralla72.workers.dev";
+let lastHTML = "";
+
+/* MENU */
+function toggleMenu(){
+  document.getElementById("menu").classList.toggle("active");
+}
+
+/* MODAL */
+function openModal(type){
+  let body=document.getElementById("modalBody");
+
+  if(type==="about"){
+    body.innerHTML="<h3>About</h3><p>AI website generator tool.</p>";
+  }
+
+  if(type==="contact"){
+    body.innerHTML="<h3>Contact</h3><p>Email: support@webvibe.ai</p>";
+  }
+
+  if(type==="donation"){
+    body.innerHTML="<h3>Donation</h3><p>PayPal / Crypto support</p>";
+  }
+
+  document.getElementById("modal").style.display="flex";
+}
+
+function closeModal(){
+  document.getElementById("modal").style.display="none";
+}
+
+/* AI */
+async function generate(){
+
+  let prompt=document.getElementById("prompt").value.trim();
+  if(!prompt)return;
+
+  document.getElementById("prompt").value="";
+  document.getElementById("output").innerHTML="<p>Generating...</p>";
+
+  try{
+    
+
+let res = await fetch(API_URL,{
+  method:"POST",
+  headers:{
+    "Content-Type":"application/json"
+  },
+  body:JSON.stringify({
+    model:"openai/gpt-4o-mini",
+    messages:[
+      {
+        role:"system",
+        content:"Return ONLY HTML website never return text"
+      },
+      {
+        role:"user",
+        content:prompt
+      }
+    ]
+  })
+});
+
+    let data=await res.json();
+
+    let html=data.choices?.[0]?.message?.content||"";
+    html=html.replace(/```html/g,"").replace(/```/g,"");
+
+    lastHTML=html;
+    document.getElementById("output").innerHTML=html;
+
+  }catch(e){
+    document.getElementById("output").innerHTML="<h3>Error</h3>";
+  }
+}
+
+/* DOWNLOAD */
+function downloadHTML(){
+  if(!lastHTML)return;
+
+  let blob=new Blob([lastHTML],{type:"text/html"});
+  let url=URL.createObjectURL(blob);
+
+  let a=document.createElement("a");
+  a.href=url;
+  a.download="website.html";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+</script>
+
+</body>
+</html>
